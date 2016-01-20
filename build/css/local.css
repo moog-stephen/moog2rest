@@ -1,0 +1,158 @@
+html {
+    height: 100%;
+    margin-bottom: -20px;
+}
+
+body {
+    padding-top: 70px;
+    padding-bottom: 40px;
+    height: 100%;
+    font-size: 14px;
+}
+
+.navbar {
+    height: 60px;
+    margin-bottom: 0;
+}
+
+i.icon-danger {
+    color: #c9302c !important;
+}
+
+i.icon-warning {
+    color: #ec971f !important;
+}
+
+i.icon-info {
+    color: #31b0d5 !important;
+}
+
+i.icon-primary {
+    color: #286090 !important;
+}
+
+i.icon-default {
+    color: #e6e6e6 !important;
+}
+
+i.icon-success {
+    color: #449d44 !important;
+}
+
+.container-fluid {
+    height: 100%;
+}
+
+.full-height {
+    height: 100%;
+}
+
+#pageContent {
+    height: inherit;
+}
+
+textarea {
+    resize: vertical;
+}
+
+.form-control {
+    height: 34px;
+    padding: 6px 12px;
+    font-size: 14px;
+}
+
+label {
+    display: inline-block;
+    max-width: 100%;
+    margin-bottom: 5px;
+    font-weight: 700;
+}
+
+.label-inline {
+    padding-right: 10px;
+}
+
+.label-inline2 {
+    padding-right: 10px;
+    padding-left: 15px;
+}
+
+.flot-chart {
+    display: block;
+    height: 400px;
+}
+
+.flot-chart-content {
+    width: 100%;
+    height: 100%;
+}
+
+/* Highlighting ------------------------------------- */
+b, i, u {
+    font-weight: normal;
+    font-style: normal;
+    text-decoration: none;
+}
+
+#listenPage_listen_data_field {
+    height: 100%;
+    overflow-x: auto;
+}
+
+#parsePage_listen_data_field {
+    height: 100%;
+    overflow-x: auto;
+}
+
+#parsePage_listen_data_field b {
+    background: #fff000;
+}
+
+#parsePage_listen_data_field i {
+    background: #80c0ff;
+}
+
+#parseMatchGroupRe b {
+    background: #aad1f7;
+}
+
+#parseMatchGroupRe i {
+    background: #f9ca69;
+}
+
+#parseMatchGroupRe i b {
+    background: #f7a700;
+}
+
+#parseMatchGroupRe i u {
+    background: #efba4a;
+}
+
+#parseMatchGroupRe b.g1 {
+    background: #d2f854;
+}
+
+#parseMatchGroupRe b.g2 {
+    background: #9ec70c;
+}
+
+#parseMatchGroupRe b.g3 {
+    background: #ecc9f7;
+}
+
+#parseMatchGroupRe b.g4 {
+    background: #54b70b;
+}
+
+#parseMatchGroupRe b.g5 {
+    background: #b688cf;
+}
+
+#parseMatchGroupRe b.err {
+    background: #ff4300 !important;
+}
+
+table.table-auto {
+    table-layout: auto;
+    width: auto !important;
+}

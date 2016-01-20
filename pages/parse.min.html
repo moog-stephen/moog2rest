@@ -1,0 +1,419 @@
+<div id="padding-height"><h3>Parse Page</h3>
+    <div class="form-group form-inline">
+        <div class="form-group"><label for="parsePage_start" class="form-inline label-inline">Line start</label><input
+                type="text" id="parsePage_start" class="form-control"></div>
+        <div class="form-group"><label for="parsePage_delimiter"
+                                       class="form-inline label-inline2">Delimiter</label><input type="text"
+                                                                                                 id="parsePage_delimiter"
+                                                                                                 class="form-control">
+        </div>
+        <div class="form-group"><label for="parsePage_quote" class="form-inline label-inline2">Text Quote</label><input
+                type="text" id="parsePage_quote" class="form-control"></div>
+        <label class="label-inline">&nbsp;</label><label for="parsePage_quotedText" class="checkbox-inline"><input
+            type="checkbox" id="parsePage_quotedText" value="">Quoted Text?</label></div>
+    <div class="form-group"><label class="label-inline">Strip Options</label><label for="parsePage_removeQuotes"
+                                                                                    class="checkbox-inline"><input
+            type="checkbox" id="parsePage_removeQuotes" value="">Remove quotes?</label></div>
+    <div class="form-group"><label for="parsePage_matchGroupRe" class="control-label">Match Group Regex</label><textarea
+            class="form-control" id="parsePage_matchGroupRe" rows="3"></textarea></div>
+</div>
+<div class="form-group full-height"><label class="control-label">Event Data</label>
+    <pre class="form-control full-height" id="parsePage_listen_data_field"></pre>
+</div>
+<ul id="contextMenu" class="dropdown-menu" role="menu" style="display:none"></ul>
+<script>// Set the page height correctly
+$('#pageContent').css("padding-bottom", function () {
+    return ($('#padding-height').height() + 50) + 'px';
+});
+
+var options = [];
+var $listenDataField = $('#parsePage_listen_data_field');
+var $parseMatchGroupRe = $('#parsePage_matchGroupRe');
+var start = 'MOO';
+var delimiter = ',';
+var quote = '"';
+var param;
+
+var parseSection = chkPath(uiState, 'parsePage');
+
+for (param in parseSection) {
+    if (parseSection.hasOwnProperty(param)) {
+        setField('parsePage.' + param);
+    }
+}
+connectChange();
+
+//
+// End of auto run script
+//
+
+
+// Set the text that a user has selected
+//
+function getSelectionText() {
+    var text = "";
+    if (window.getSelection) {
+        text = window.getSelection().toString();
+    }
+    else if (document.selection && document.selection.type != "Control") {
+        text = document.selection.createRange().text;
+    }
+    return text;
+}
+
+
+// Context menu processing
+//
+(function ($, window) {
+
+    $.fn.contextMenu = function (settings) {
+
+        return this.each(function () {
+
+            // Open context menu
+            $(this).on("contextmenu", function (e) {
+                // return native menu if pressing control
+                if (e.ctrlKey) {
+                    return;
+                }
+
+                // return if not a p
+                if (!$(e.target).is('p') && !$(e.target).parents().is('p')) {
+                    return;
+                }
+
+                var offsetX = e.offsetX + e.target.offsetLeft;
+                var offsetY = e.offsetY + e.target.offsetTop;
+
+                var selectionText = getSelectionText();
+
+                var reTypes;
+
+                var $contextMenu = $('#contextMenu');
+
+
+                if (selectionText) {
+                    reTypes = runReTests(selectionText);
+                }
+
+                $contextMenu.html('<li><a tabindex="-1" href="#cm_copy">Copy to Regex</a></li>' +
+                        '<li><a tabindex="-1" href="#cm_highlight">Highlight Matches</a></li>' +
+                        '<li><a tabindex="-1" href="#cm_sample">Make Sample</a></li>' +
+                        '<li class="divider"></li>');
+
+                if (!selectionText) {
+                    $contextMenu.append('<li><a tabindex="-1" href="#cm_analyse">Analyse Line</a></li>');
+                }
+                else {
+                    reTypes.forEach(function (type) {
+                        $contextMenu.append('<li><a tabindex="-1" href="#cm_' + type + '">Type ' + type + '</a></li>');
+                    });
+                }
+
+                //open menu
+                var $menu = $(settings.menuSelector)
+                        .data("invokedOn", $(e.target))
+                        .show()
+                        .css({
+                            position: "absolute",
+                            left: getMenuPosition(offsetX, 'width', 'scrollLeft', e),
+                            top: getMenuPosition(offsetY, 'height', 'scrollTop', e)
+                        })
+                        .off('click')
+                        .on('click', 'a', function (e) {
+                            $menu.hide();
+
+                            var $invokedOn = $menu.data("invokedOn");
+                            var $selectedMenu = $(e.target);
+
+                            settings.menuSelected.call(this, $invokedOn, $selectedMenu);
+                        });
+
+                return false;
+            });
+
+            //make sure menu closes on any click
+            $(document).click(function () {
+                $(settings.menuSelector).hide();
+            });
+        });
+
+        function getMenuPosition(mouse, direction, scrollDir, e) {
+            var win = $(e.currentTarget)[direction](),
+                    scroll = $(e.currentTarget)[scrollDir](),
+                    menu = $(settings.menuSelector)[direction](),
+                    position = mouse - scroll;
+            //position = mouse;
+
+            // opening menu would pass the side of the page
+            if (mouse + menu > win && menu < mouse) {
+                position -= menu;
+            }
+
+            return position;
+        }
+
+    };
+})(jQuery, window);
+
+$listenDataField.contextMenu({
+    menuSelector: "#contextMenu",
+    menuSelected: function (invokedOn, selectedMenu) {
+        var menuItem = selectedMenu.attr('href');
+        var targetText = invokedOn.text();
+        var selectedText = getSelectionText();
+        var msg = "You selected the menu item '" + menuItem +
+                "' on the value '" + targetText + "'" +
+                " Selected text is '" + selectedText + "'";
+        //alert(msg);
+
+        actionContextMenu(menuItem, targetText, selectedText);
+    }
+});
+
+
+function actionContextMenu(item, target, selected) {
+
+    var eventData = [];
+    var newEventData = [];
+
+    if (!item || !target) {
+        return;
+    }
+    item = item.replace('#', '');
+
+    var val = $parseMatchGroupRe.val();
+    switch (item) {
+        case "cm_copy":
+            $parseMatchGroupRe.val(val + '(' + selected + ')').change();
+            break;
+        case "cm_analyse":
+            target = target.replace(/^<p>/i, '');
+            target = target.replace(/<\/p>$/i, '');
+            target = target.replace(/^<strong>/i, '');
+            target = target.replace(/<\/strong>$/i, '');
+            debugger;
+            uiState.parsePage.fieldArray = analyseLine(target);
+            toSave('dirty');
+            break;
+        case "cm_highlight":
+            if (!uiState.parsePage.fieldArray || uiState.parsePage.fieldArray.length <= 0) {
+                break;
+            }
+            eventData = $listenDataField.html();
+            eventData = eventData.split('</p>');
+            eventData.forEach(function (row) {
+                if (row) {
+                    row = row.replace(/^<p>/, '')
+                    row = row.replace(/^<strong>/i, '');
+                    row = row.replace(/<\/strong>$/i, '');
+                    debugger;
+                    newEventData.push('<p>' + highlightMatches(row) + '</p>');
+                    $listenDataField.html(newEventData);
+                }
+            });
+            break;
+        case "cm_sample":
+            target = target.replace(/^<p>/i, '');
+            target = target.replace(/<\/p>$/i, '');
+            target = target.replace(/^<strong>/i, '');
+            target = target.replace(/<\/strong>$/i, '');
+            uiState.parsePage.fieldArray = createSample(target);
+            toSave('dirty');
+            break;
+        case "cm_email":
+            $parseMatchGroupRe.val(val + typeToRe('email')).change();
+            break;
+        default :
+    }
+}
+
+
+/**
+ * Function to take the regex and apply alternating highlights (<b>/<i>)
+ * @param textToHighlight
+ * @returns {*}
+ */
+function highlightMatches(textToHighlight) {
+
+    var delimiter = uiState.parsePage.delimiter ? uiState.parsePage.delimiter : ' ';
+    var matchRe = $parseMatchGroupRe.val();
+    var re;
+    var matchArray;
+    var matchObject = {};
+    var odd = true;
+    var retText = '';
+
+    if (!matchRe && delimiter) {
+        matchArray = textToHighlight.split(delimiter);
+        matchArray.forEach(function (match) {
+            //matchObject['field' + fieldCount++] = match;
+            if (odd) {
+                retText += '<b>' + match + '</b>' + delimiter;
+                odd = false;
+            }
+            else {
+                retText += '<i>' + match + '</i>' + delimiter;
+                odd = true;
+            }
+        });
+        if (retText.length > 1 && delimiter.length > 0) {
+            retText = retText.substring(0, retText.length - delimiter.length);
+        }
+        return retText;
+
+    }
+    else {
+
+        re = XRegExp.build(matchRe, reBuildSubs, 'in');
+
+        return XRegExp.replace(textToHighlight, re, function (match) {
+
+            for (var subMatch in match) {
+                if (match.hasOwnProperty(subMatch) && isNaN(subMatch)) {
+                    if (odd) {
+                        retText += '<b>' + match[subMatch] + '</b>' + delimiter;
+                        odd = false;
+                    }
+                    else {
+                        retText += '<i>' + match[subMatch] + '</i>' + delimiter;
+                        odd = true;
+                    }
+                }
+            }
+            if (retText.length > 1 && delimiter.length > 0) {
+                retText = retText.substring(0, retText.length - delimiter.length);
+            }
+            return retText;
+        });
+    }
+}
+
+
+/**
+ *
+ * @param line
+ * @returns {Array}
+ */
+function analyseLine(line) {
+    var matches;
+    var newRe = '';
+    var types;
+    var fieldCount = 0;
+    var fieldObject = {};
+    var fieldList = [];
+    var delimiter = XRegExp.escape(uiState.parsePage.delimiter ? uiState.parsePage.delimiter : ' ');
+    line = line ? line : displayEvents;
+
+    if (uiState.parsePage.delimiter) {
+        matches = line.split(uiState.parsePage.delimiter);
+        //highlightMatches()
+    }
+    else {
+        // TODO some smart stuff to build the regex from non delimited text
+    }
+
+    matches.forEach(function (field) {
+        if (field) {
+            types = runReTests(field);
+            if (types) {
+                // take first one as best guess
+                newRe += typeToRe(types[0], fieldCount += 1) + delimiter;
+                fieldObject.name = types[0] + '' + fieldCount;
+            }
+            else {
+                newRe += typeToRe('any', fieldCount += 1) + delimiter;
+                fieldObject.name = 'any' + fieldCount;
+            }
+            if (field.length > SAMPLNG) {
+                fieldObject.value = field.slice(0, SAMPLNG);
+            }
+            else {
+                fieldObject.value = field;
+            }
+
+        }
+        else {
+            newRe += typeToRe('any', fieldCount += 1) + delimiter;
+            fieldObject.name = 'any' + fieldCount;
+            fieldObject.value = 'NULL';
+        }
+        fieldList.push(fieldObject);
+        fieldObject = {};
+    });
+
+    if (newRe.length > 1 && delimiter) {
+        newRe = newRe.substring(0, newRe.length - delimiter.length);
+    }
+    $parseMatchGroupRe.val(newRe).change();
+
+    return fieldList;
+}
+
+
+function createSample(sampleLine) {
+
+    var delimiter = uiState.parsePage.delimiter ? uiState.parsePage.delimiter : '';
+    var matchRe = uiState.parsePage.matchGroupRe;
+    var matchObject = {};
+    var matchArray;
+    var fieldCount = 0;
+    var fieldArray = [];
+    var fieldObject = {};
+    var reValidField = /[a-z]{3,}[0-9]+/;
+    var re;
+
+    if (!matchRe && delimiter) {
+        matchArray = sampleLine.split(delimiter);
+        matchArray.forEach(function (match) {
+            fieldObject.name = 'field' + fieldCount++;
+            if (match) {
+                if (match.length > SAMPLNG) {
+                    fieldObject.value = match.slice(0, SAMPLNG) + '...';
+                }
+                else {
+                    fieldObject.value = match;
+                }
+            }
+            else {
+                fieldObject.value = 'NULL';
+            }
+            fieldArray.push(fieldObject);
+            fieldObject = {};
+        });
+    }
+    else {
+        re = XRegExp.build(matchRe, reBuildSubs, 'in');
+        matchObject = XRegExp.exec(sampleLine, re);
+
+        if (matchObject && typeof matchObject === 'object') {
+            for (var match in matchObject) {
+                if (matchObject.hasOwnProperty(match) && reValidField.test(match)) {
+                    fieldObject.name = match;
+                    if (matchObject[match]) {
+                        if (matchObject[match].length > SAMPLNG) {
+                            fieldObject.value = matchObject[match].slice(0, SAMPLNG) + '...';
+                        }
+                        else {
+                            fieldObject.value = matchObject[match];
+                        }
+                    }
+                    else {
+                        fieldObject.value = 'NULL';
+                    }
+                    fieldArray.push(fieldObject);
+                    fieldObject = {};
+                }
+            }
+        }
+    }
+
+    return fieldArray;
+}
+
+function typeToRe(type, count) {
+    if (count) {
+        return '(?<' + type + count + '>{{' + type + '}})';
+    }
+    return '(?<' + type + '>{{' + type + '}})';
+}</script>

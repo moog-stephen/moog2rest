@@ -1,0 +1,168 @@
+<h3>Map Page</h3>
+
+<!-- /.row -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Mapping Selected to MOOG
+                <p>Signature is: source, agent, manager, type</p>
+                <span id="sampleSig"></span>
+            </div>
+            <!-- /.panel-heading -->
+            <div class="panel-body">
+                <div class="mappingTable_wrapper">
+                    <table class="table table-striped table-bordered table-hover" id="mappingTable-mapping">
+                        <thead>
+                        <tr>
+                            <th>Target Field</th>
+                            <th>Source Field</th>
+                            <th>Sample</th>
+                            <th>Type</th>
+                            <th>Conversion</th>
+                        </tr>
+                        </thead>
+                        <tbody id="mappingTable-body">
+                        <!-- buildTable() output here -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- /.table-responsive -->
+            </div>
+            <!-- /.panel-body -->
+        </div>
+        <!-- /.panel -->
+    </div>
+    <!-- /.col-lg-12 -->
+</div>
+<!-- /.row -->
+
+<script>
+    var $mappingTable = $('#mappingTable-body');
+
+    $mappingTable.html(buildTable());
+
+    setSelects();
+
+    connectTableChange();
+
+    function buildTable() {
+        var fieldSelection = '';
+        var row;
+        var table = '';
+        var odd = false;
+        var rowNum = 0;
+        if (!uiState.parsePage.fieldArray) {
+            return;
+        }
+
+        if (uiState.parsePage.fieldArray.length > 0) {
+            uiState.parsePage.fieldArray.forEach(function (field) {
+                fieldSelection += '<option>' + field.name + '</option>';
+            });
+            fieldSelection += '</select></td>';
+        }
+        debugger;
+        if (uiState.mapPage.fieldMapArray.length > 0) {
+            uiState.mapPage.fieldMapArray.forEach(function (field) {
+                if (odd) {
+                    odd = false;
+                    row = '<tr class="even">';
+
+                }
+                else {
+                    odd = true;
+                    row = '<tr class="odd">';
+                }
+                row += '<td>' + field.name + '</td>' +
+                        '<td><select id="mapPage_fieldMapArray_source_' + rowNum + '" class="dropdown-toggle">' +
+                        fieldSelection +
+                        '<td id="mapPage_fieldMapArray_sample_' + rowNum + '">' + field.value + '</td>' +
+                        '<td id="mapPage_fieldMapArray_type_' + rowNum + '">' + field.type + '</td>';
+
+                if (field.type === 'number') {
+                    row += '<td><select id="mapPage_fieldMapArray_conversion_' + rowNum + '" class="dropdown-toggle">' +
+                            '<option>dateToEpoch</option>' +
+                            '<option>textToNumber</option>' +
+                            '<option>NONE</option>' +
+                            '</select></td>'
+                }
+                else {
+                    row += '<td><select id="mapPage_fieldMapArray_conversion_' + rowNum + '" class="dropdown-toggle">' +
+                            '<option>NONE</option>' +
+                            '</select></td>'
+                }
+
+                row += '</tr>';
+
+                table += row;
+                rowNum += 1;
+            });
+        }
+        uiState.mapPage.sampleSig = genSig();
+        return table;
+    }
+
+    function setSelects() {
+        var rowNum = 0;
+
+        if (uiState.mapPage.fieldMapArray.length > 0) {
+            uiState.mapPage.fieldMapArray.forEach(function (field) {
+                $('#mapPage_fieldMapArray_source_' + rowNum).val(field.source);
+                $('#mapPage_fieldMapArray_conversion_' + rowNum).val(field.conversion);
+                rowNum += 1;
+            });
+        }
+    }
+
+    function connectTableChange() {
+        $(":input")
+                .change(function () {
+                    var $element = $(this);
+                    var id = this.id.replace(/_/g, '.');
+                    var saveName = id.slice(0, id.lastIndexOf('.'));
+                    var name = saveName.slice(saveName.lastIndexOf('.') + 1);
+                    saveName = saveName.slice(0, saveName.lastIndexOf('.'));
+                    var rowId = $element.closest('tr').index();
+                    var targetObj = chkPath(uiState, saveName);
+                    var value = $element.val();
+                    var sourceObj = $.grep(uiState.parsePage.fieldArray, function (e) {
+                        return e.name === value
+                    })[0];
+                    if (name === 'source') {
+                        targetObj[rowId].source = value;
+                        targetObj[rowId].value = sourceObj.value;
+                        $('#mapPage_fieldMapArray_sample_' + rowId).text(sourceObj.value);
+                        fillObject(uiState, saveName[rowId], targetObj);
+                        toSave('dirty');
+                    }
+                    if (name === 'conversion') {
+                        targetObj[rowId].conversion = value;
+                        fillObject(uiState, saveName[rowId], targetObj);
+                        toSave('dirty');
+                    }
+                    uiState.mapPage.sampleSig = genSig();
+                });
+    }
+
+    function genSig() {
+        debugger;
+        var sigArray = [];
+        var fieldArray = uiState.mapPage.fieldMapArray;
+        var signature;
+        var sigIdx;
+        uiState.mapPage.signature.forEach(function (field) {
+            sigArray.push(field);
+        });
+        fieldArray.forEach(function (field) {
+            sigIdx = sigArray.indexOf(field.name);
+            if (sigIdx >= 0) {
+                sigArray[sigIdx] = field.value;
+            }
+        });
+        signature = sigArray.join(':');
+        $('#sampleSig').text(signature);
+        return signature;
+    }
+
+</script>
