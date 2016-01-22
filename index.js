@@ -98,12 +98,14 @@ io.on('connection', function (socket) {
         }
         if (stateChange.key === 'stream.paused' && stateChange.value === true) {
             console.log('Pause playings events');
+            appState.stream.paused = stateChange.value;
             if (GTCPSock) {
                 GTCPSock.pause();
             }
         }
         else if (stateChange.key === 'stream.paused' && stateChange.value === false) {
             console.log('UnPause playings events');
+            appState.stream.paused = stateChange.value;
             if (GTCPSock) {
                 GTCPSock.resume();
             }
@@ -136,7 +138,7 @@ var TCPServer = net.createServer(function (TCPSock) {
 
         console.log('Event Count ' + eventCounters.inCount);
         if (eventCounters.inCount === 0) {
-            if (GTCPSock) {
+            if (GTCPSock && !appState.stream.paused) {
                 GTCPSock.resume();
             }
         }
@@ -236,7 +238,7 @@ function sendEvent(eventLine, counters, line, totLines) {
                     counters.outCount++;
                     console.log('Lines processed :' + line + ' of ' + totLines);
                     if (line >= totLines) {
-                        if (GTCPSock) {
+                        if (GTCPSock && !appState.stream.paused) {
                             GTCPSock.resume();
                         }
                     }
@@ -248,7 +250,7 @@ function sendEvent(eventLine, counters, line, totLines) {
                     io.emit('message', {status: 'D', text: res.statusCode + ' - ' + res.statusMessage});
                     console.log('Lines processed :' + line + ' of ' + totLines);
                     if (line >= totLines) {
-                        if (GTCPSock) {
+                        if (GTCPSock && !appState.stream.paused) {
                             GTCPSock.resume();
                         }
                     }
@@ -261,7 +263,7 @@ function sendEvent(eventLine, counters, line, totLines) {
             counters.discardCount++;
             console.log('Lines processed :' + line + ' of ' + totLines);
             if (line >= totLines) {
-                if (GTCPSock) {
+                if (GTCPSock && !appState.stream.paused) {
                     GTCPSock.resume();
                 }
             }
@@ -272,7 +274,7 @@ function sendEvent(eventLine, counters, line, totLines) {
         console.error('mapEvent failed.');
         console.log('Lines processed :' + line + ' of ' + totLines);
         if (line >= totLines) {
-            if (GTCPSock) {
+            if (GTCPSock && !appState.stream.paused) {
                 GTCPSock.resume();
             }
         }
