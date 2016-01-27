@@ -15,11 +15,14 @@ var app = express();
 var http = require('http').Server(app);
 var moog = require('node-moog');
 
-var sio = require('socket.io');
-var io = new sio(http);
+var Sio = require('socket.io');
+var io = new Sio(http);
 
 var pages = require('./lib/pages');
 var reBuildSubs = setUpRe();
+
+var multer = require('multer');
+var upload = multer( { dest: 'uploads/' } );
 
 const HTTP_PORT = 3000;
 
@@ -56,6 +59,22 @@ app.get('/', function (req, res) {
     res.sendFile(__dirname + '/index.html');
 });
 
+app.post('/upload', upload.single('eventfile'), function (req, res, next) {
+    // req.file is the `eventFile` file
+    // req.body will hold the text fields, if there were any
+
+    console.log('Incoming file');
+    //console.log(util.inspect(req));
+    fs.rename(req.file.path,req.file.destination+req.file.originalname, function (err) {
+        if (err) {
+            console.log('Rename error '+util.inspect(err));
+        } else {
+            console.log('Renamed file');
+        }
+    });
+
+    return res.status( 200 ).send( {message: "Okay"} );
+});
 
 io.on('connection', function (socket) {
     console.log('Web server socket.io connection %j', socket.handshake.headers.host);
