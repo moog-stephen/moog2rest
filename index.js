@@ -22,7 +22,7 @@ var pages = require('./lib/pages');
 var reBuildSubs = setUpRe();
 
 var multer = require('multer');
-var upload = multer( { dest: 'uploads/' } );
+var upload = multer({dest: 'uploads/'});
 
 const HTTP_PORT = 3000;
 
@@ -65,15 +65,15 @@ app.post('/upload', upload.single('eventfile'), function (req, res, next) {
 
     console.log('Incoming file');
     //console.log(util.inspect(req));
-    fs.rename(req.file.path,req.file.destination+req.file.originalname, function (err) {
+    fs.rename(req.file.path, req.file.destination + req.file.originalname, function (err) {
         if (err) {
-            console.log('Rename error '+util.inspect(err));
+            console.log('Rename error ' + util.inspect(err));
         } else {
             console.log('Renamed file');
         }
     });
 
-    return res.status( 200 ).send( {message: "Okay"} );
+    return res.status(200).send({message: "Okay"});
 });
 
 io.on('connection', function (socket) {

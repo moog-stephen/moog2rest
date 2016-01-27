@@ -1,74 +1,103 @@
-<div id="padding-height"><h3>Listen Page</h3><ul class="nav nav-tabs" role="tablist"><li class="active"><a href="#socket" role="tab" data-toggle="tab">Socket</a></li><li><a href="#file" role="tab" data-toggle="tab">File</a></li></ul><div class="tab-content"><div class="tab-pane fade active in" id="socket"><h4>Socket Configuration</h4><label class="form-inline label-inline">Listen to Interface</label><div class="form-group" id="host-list"></div><div class="form-group form-inline"><div class="form-group"><label for="listenPage_port" class="form-inline label-inline">Port number</label><input type="number" class="form-control" id="listenPage_port" min="3000" max="90000" placeholder="86411"></div></div></div><div class="tab-pane fade" id="file"><h4>File Configuration</h4><div class="upload-drop-zone dropzone" id="drop-zone"></div></div></div></div><div class="form-group"><label for="listenPage_cache" class="control-label">Capture lines</label><select id="listenPage_cache" class="form-control"><option value="5">5</option><option value="10">10</option><option value="20">20</option></select></div><div class="form-group full-height"><label class="control-label">Event Data</label><div readonly="readonly" class="form-control full-height" id="listenPage_listen_data_field"></div></div><script>// Set the page height correctly
-    $('#pageContent').css("padding-bottom", function () {
-        return ($('#padding-height').height() + 50) + 'px';
-    });
+<div id="padding-height"><h3>Listen Page</h3>
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="active"><a href="#socket" role="tab" data-toggle="tab">Socket</a></li>
+        <li><a href="#file" role="tab" data-toggle="tab">File</a></li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane fade active in" id="socket"><h4>Socket Configuration</h4><label
+                class="form-inline label-inline">Listen to Interface</label>
+            <div class="form-group" id="host-list"></div>
+            <div class="form-group form-inline">
+                <div class="form-group"><label for="listenPage_port" class="form-inline label-inline">Port
+                    number</label><input type="number" class="form-control" id="listenPage_port" min="3000" max="90000"
+                                         placeholder="86411"></div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="file"><h4>File Configuration</h4>
+            <div class="upload-drop-zone dropzone" id="drop-zone"></div>
+        </div>
+    </div>
+</div>
+<div class="form-group"><label for="listenPage_cache" class="control-label">Capture lines</label><select
+        id="listenPage_cache" class="form-control">
+    <option value="5">5</option>
+    <option value="10">10</option>
+    <option value="20">20</option>
+</select></div>
+<div class="form-group full-height"><label class="control-label">Event Data</label>
+    <div readonly="readonly" class="form-control full-height" id="listenPage_listen_data_field"></div>
+</div>
+<script>// Set the page height correctly
+$('#pageContent').css("padding-bottom", function () {
+    return ($('#padding-height').height() + 50) + 'px';
+});
 
-    // Generate the form and populate with content from the server
-    //
-    var iFaces = chkPath(uiState, 'listenPage.iFaces');
-    var $streamPort = $('#listenPage_port');
-    var $streamCache = $('#listenPage_cache');
-    var $listenDataField = $('#listenPage_listen_data_field');
-    var $hostList = $('#host-list');
-    var host = 'localhost';
-    var port = 86411;
-    var cache = 10;
+// Generate the form and populate with content from the server
+//
+var iFaces = chkPath(uiState, 'listenPage.iFaces');
+var $streamPort = $('#listenPage_port');
+var $streamCache = $('#listenPage_cache');
+var $listenDataField = $('#listenPage_listen_data_field');
+var $hostList = $('#host-list');
+var host = 'localhost';
+var port = 86411;
+var cache = 10;
 
-    var $dropZone = document.getElementById('drop-zone');
-    var $uploadForm = document.getElementById('js-upload-form');
+var $dropZone = document.getElementById('drop-zone');
+var $uploadForm = document.getElementById('js-upload-form');
 
-    var startUpload = function(files) {
-        console.log(files)
-    };
+var startUpload = function (files) {
+    console.log(files)
+};
 
-    $hostList.html('<label class="radio-inline">' +
-            '<input type="radio" name="ni" value="localhost">localhost</label>' +
-            '<label class="radio-inline">' +
-            '<input type="radio" name="ni" value="0.0.0.0">Any (0.0.0.0)</label>'
-    );
-    for (var i = 0; i < iFaces.length; i += 1) {
-        var rdb = '<label class="radio-inline">' +
-                '<input type="radio" name="ni" value="' + iFaces[i] + '">' + iFaces[i] +
-                '</label>';
-        $hostList.append(rdb);
-    }
-    if (chkPath(uiState, 'listenPage.host')) {
-        host = chkPath(uiState, 'listenPage.host');
-    }
-    fillObject(uiState, 'listenPage.host', host);
-    $("input[name='ni'][value='" + host + "']").prop('checked', true);
-    $("input[name='ni']")
-            .change(function () {
-                fillObject(uiState, 'listenPage.host', $(this).val());
-                toSave('dirty');
-            });
+$hostList.html('<label class="radio-inline">' +
+        '<input type="radio" name="ni" value="localhost">localhost</label>' +
+        '<label class="radio-inline">' +
+        '<input type="radio" name="ni" value="0.0.0.0">Any (0.0.0.0)</label>'
+);
+for (var i = 0; i < iFaces.length; i += 1) {
+    var rdb = '<label class="radio-inline">' +
+            '<input type="radio" name="ni" value="' + iFaces[i] + '">' + iFaces[i] +
+            '</label>';
+    $hostList.append(rdb);
+}
+if (chkPath(uiState, 'listenPage.host')) {
+    host = chkPath(uiState, 'listenPage.host');
+}
+fillObject(uiState, 'listenPage.host', host);
+$("input[name='ni'][value='" + host + "']").prop('checked', true);
+$("input[name='ni']")
+        .change(function () {
+            fillObject(uiState, 'listenPage.host', $(this).val());
+            toSave('dirty');
+        });
 
-    if (chkPath(uiState, 'listenPage.port')) {
-        port = chkPath(uiState, 'listenPage.port');
-    }
-    fillObject(uiState, 'listenPage.port', port);
-    $streamPort.val(chkPath(uiState, 'listenPage.port'))
-            .change(function () {
-                fillObject(uiState, 'listenPage.port', $(this).val());
-                toSave('dirty');
-            });
+if (chkPath(uiState, 'listenPage.port')) {
+    port = chkPath(uiState, 'listenPage.port');
+}
+fillObject(uiState, 'listenPage.port', port);
+$streamPort.val(chkPath(uiState, 'listenPage.port'))
+        .change(function () {
+            fillObject(uiState, 'listenPage.port', $(this).val());
+            toSave('dirty');
+        });
 
-    if (chkPath(uiState, 'listenPage.cache')) {
-        cache = chkPath(uiState, 'listenPage.cache');
-    }
-    fillObject(uiState, 'listenPage.cache', cache);
-    $streamCache.val(chkPath(uiState, 'listenPage.cache'))
-            .change(function () {
-                fillObject(uiState, 'listenPage.cache', $(this).val());
-                toSave('dirty');
-            });
+if (chkPath(uiState, 'listenPage.cache')) {
+    cache = chkPath(uiState, 'listenPage.cache');
+}
+fillObject(uiState, 'listenPage.cache', cache);
+$streamCache.val(chkPath(uiState, 'listenPage.cache'))
+        .change(function () {
+            fillObject(uiState, 'listenPage.cache', $(this).val());
+            toSave('dirty');
+        });
 
-    var dropZoneOptions = {
-        url: "/upload",
-        paramName: "eventfile", // The name that will be used to transfer the file
-        maxFilesize: 10, // MB
-        dictDefaultMessage: "Click to browse or drag a text file here to upload. Max file size10Mb",
-        addRemoveLinks: true,
-        acceptedFiles: "text/*"
-    };
-    var myDropzone = new Dropzone($dropZone, dropZoneOptions);</script>
+var dropZoneOptions = {
+    url: "/upload",
+    paramName: "eventfile", // The name that will be used to transfer the file
+    maxFilesize: 10, // MB
+    dictDefaultMessage: "Click to browse or drag a text file here to upload. Max file size10Mb",
+    addRemoveLinks: true,
+    acceptedFiles: "text/*"
+};
+var myDropzone = new Dropzone($dropZone, dropZoneOptions);</script>
