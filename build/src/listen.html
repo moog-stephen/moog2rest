@@ -134,7 +134,7 @@
     // catch the tab change event
     $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
         var target = $(e.target).attr("href"); // activated tab
-        fillObject(uiState, 'listenPage.streamType', target );
+        fillObject(uiState, 'listenPage.streamType', target.replace('#','') );
         toSave('dirty');
     });
 </script>
