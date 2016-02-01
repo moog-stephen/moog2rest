@@ -187,12 +187,10 @@ table.table-auto {
 
 /* layout.css Style */
 .upload-drop-zone {
+    /*width: 300px;*/
+    /*height: 100px;*/
     border-width: 2px;
-    margin-bottom: 20px;
-}
-
-/* skin.css Style*/
-.upload-drop-zone {
+    margin-bottom: 2px;
     color: #ccc;
     border-style: dashed;
     border-color: #ccc;
@@ -204,3 +202,10 @@ table.table-auto {
     border-color: #222;
 }
 
+.file-name {
+    padding: 4px;
+}
+
+.highlight-file {
+    background-color: lightgreen;
+}

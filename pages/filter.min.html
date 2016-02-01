@@ -1,207 +1,182 @@
-<h3>Filter Page</h3>
-<div class="row">
-    <div class="col-lg-12">
-        <div class="panel panel-default">
-            <div class="panel-heading">Discard Events With</div>
-            <div class="panel-body"><p>Add a first row, use the AND, OR buttons to add subsequent rows, remove a row
-                with x.</p>
-                <div class="dataTable_wrapper">
-                    <table class="table table-striped table-bordered table-hover" id="filterTable-filters">
-                        <thead>
-                        <tr>
-                            <th>Field</th>
-                            <th>Check</th>
-                            <th>Value</th>
-                            <th id="filterTable-topButton"></th>
-                        </tr>
-                        </thead>
-                        <tbody id="filterTable-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<script>var $filterTable = $('#filterTable-body');
+<h3>Filter Page</h3><div class="row"><div class="col-lg-12"><div class="panel panel-default"><div class="panel-heading">Discard Events With</div><div class="panel-body"><p>Add a first row, use the AND, OR buttons to add subsequent rows, remove a row with x.</p><div class="dataTable_wrapper"><table class="table table-striped table-bordered table-hover" id="filterTable-filters"><thead><tr><th>Field</th><th>Check</th><th>Value</th><th id="filterTable-topButton"></th></tr></thead><tbody id="filterTable-body"></tbody></table></div></div></div></div></div><script>var $filterTable = $('#filterTable-body');
 
-$filterTable.html(buildTable());
-setSelects();
-
-connectTableChange();
-
-function buildTable() {
-    var table = '';
-    if (chkPath(uiState, 'filterPage.fieldArray') && chkPath(uiState, 'filterPage.fieldArray').length > 0) {
-        table = renderTable(chkPath(uiState, 'filterPage.fieldArray'));
-    }
-    else {
-        $('#filterTable-topButton')
-                .html(
-                        '<button type="button" class="btn btn-default btn-xs" id="play-button" aria-label="Left Align">' +
-                        '<span class="glyphicon glyphicon-plus" aria-hidden="true">' +
-                        '</span>' +
-                        '</button>')
-                .click(function () {
-                    addRow(0);
-                });
-    }
-    return table;
-}
-
-function addRow(id) {
-    if (chkPath(uiState, 'filterPage.fieldArray') && id > 0) {
-        uiState.filterPage.fieldArray.splice(id, 0, {field: 'please select..', check: 'equals', join: ''});
-    }
-    if (id === 0 && !chkPath(uiState, 'filterPage.fieldArray')) {
-        uiState.filterPage.fieldArray = [];
-        uiState.filterPage.fieldArray.push({field: 'please select..', check: 'equals', join: ''});
-    }
-
-    $filterTable.html(renderTable(uiState.filterPage.fieldArray));
+    $filterTable.html(buildTable());
     setSelects();
+
     connectTableChange();
-}
 
-function renderTable(fields) {
-    var table = '';
-    var fieldSelection = '';
-    var checkSelection = '';
-    var rowButtons = '';
-    var row;
-    var odd = false;
-    var rowNum = 0;
-    var fieldValue;
-    var fieldJoin;
-
-    if (uiState.mapPage.fieldMapArray.length > 0) {
-        uiState.mapPage.fieldMapArray.forEach(function (field) {
-            fieldSelection += '<option>' + field.name + '</option>';
-        });
-        fieldSelection += '</select></td>';
-    }
-
-    checkSelection = '' +
-            '<option>Equals</option>' +
-            '<option>Contains</option>' +
-            '<option>Greater Than</option>' +
-            '<option>Less Than</option>' +
-            '<option>Starts With</option>' +
-            '<option>In The Future</option>' +
-            '</select></td>';
-
-    rowButtons = '<div class="btn-group-xs" role="group" aria-label="row edit">' +
-            '<button type="button" class="btn btn-default btn-xs" name="AND">AND</button>' +
-            '<button type="button" class="btn btn-default btn-xs" name="OR">OR</button>' +
-            '<button type="button" class="btn btn-default btn-xs" name="DEL">' +
-            '<span class="glyphicon glyphicon-remove" aria-hidden="true">' +
-            '</span></button>' +
-            '</div>';
-
-    fields.forEach(function (field) {
-        if (odd) {
-            odd = false;
-            row = '<tr class="even">';
-
+    function buildTable() {
+        var table = '';
+        if (chkPath(uiState, 'filterPage.fieldArray') && chkPath(uiState, 'filterPage.fieldArray').length > 0) {
+            table = renderTable(chkPath(uiState, 'filterPage.fieldArray'));
         }
         else {
-            odd = true;
-            row = '<tr class="odd">';
+            $('#filterTable-topButton')
+                    .html(
+                            '<button type="button" class="btn btn-default btn-xs" id="play-button" aria-label="Left Align">' +
+                            '<span class="glyphicon glyphicon-plus" aria-hidden="true">' +
+                            '</span>' +
+                            '</button>')
+                    .click(function () {
+                        addRow(0);
+                    });
+        }
+        return table;
+    }
+
+    function addRow(id) {
+        if (chkPath(uiState, 'filterPage.fieldArray') && id > 0) {
+            uiState.filterPage.fieldArray.splice(id, 0, {field: 'please select..', check: 'equals', join: ''});
+        }
+        if (id === 0 && !chkPath(uiState, 'filterPage.fieldArray')) {
+            uiState.filterPage.fieldArray = [];
+            uiState.filterPage.fieldArray.push({field: 'please select..', check: 'equals', join: ''});
         }
 
-        fieldValue = field.value || '';
-        fieldJoin = field.join || '';
+        $filterTable.html(renderTable(uiState.filterPage.fieldArray));
+        setSelects();
+        connectTableChange();
+    }
 
-        row += '<td><select id="filterPage_fieldArray_field_' + rowNum + '" class="dropdown-toggle">' +
-                fieldSelection +
-                '<td><select id="filterPage_fieldArray_check_' + rowNum + '" class="dropdown-toggle">' +
-                checkSelection +
-                '<td><input id="filterPage_fieldArray_value_' + rowNum + '" value="' + fieldValue +
-                '">&nbsp;<span id="filterPage_fieldArray_join_' + rowNum + '">' + fieldJoin + '</span></td>';
+    function renderTable(fields) {
+        var table = '';
+        var fieldSelection = '';
+        var checkSelection = '';
+        var rowButtons = '';
+        var row;
+        var odd = false;
+        var rowNum = 0;
+        var fieldValue;
+        var fieldJoin;
 
-        row += '<td class="col-xs-2">' + rowButtons + '</td>';
+        if (uiState.mapPage.fieldMapArray.length > 0) {
+            uiState.mapPage.fieldMapArray.forEach(function (field) {
+                fieldSelection += '<option>' + field.name + '</option>';
+            });
+            fieldSelection += '</select></td>';
+        }
 
-        row += '</tr>';
+        checkSelection = '' +
+                '<option>Equals</option>' +
+                '<option>Contains</option>' +
+                '<option>Greater Than</option>' +
+                '<option>Less Than</option>' +
+                '<option>Starts With</option>' +
+                '<option>In The Future</option>' +
+                '</select></td>';
 
-        table += row;
-        rowNum += 1;
-    });
-    return table;
-}
+        rowButtons = '<div class="btn-group-xs" role="group" aria-label="row edit">' +
+                '<button type="button" class="btn btn-default btn-xs" name="AND">AND</button>' +
+                '<button type="button" class="btn btn-default btn-xs" name="OR">OR</button>' +
+                '<button type="button" class="btn btn-default btn-xs" name="DEL">' +
+                '<span class="glyphicon glyphicon-remove" aria-hidden="true">' +
+                '</span></button>' +
+                '</div>';
 
-function setSelects() {
-    var rowNum = 0;
+        fields.forEach(function (field) {
+            if (odd) {
+                odd = false;
+                row = '<tr class="even">';
+            }
+            else {
+                odd = true;
+                row = '<tr class="odd">';
+            }
 
-    if (chkPath(uiState, 'filterPage.fieldArray') && chkPath(uiState, 'filterPage.fieldArray').length > 0) {
-        uiState.filterPage.fieldArray.forEach(function (field) {
-            $('#filterPage_fieldArray_field_' + rowNum).val(field.field);
-            $('#filterPage_fieldArray_check_' + rowNum).val(field.check);
+            fieldValue = field.value || '';
+            fieldJoin = field.join || '';
+
+            row += '<td><select id="filterPage_fieldArray_field_' + rowNum + '" class="dropdown-toggle">' +
+                    fieldSelection +
+                    '<td><select id="filterPage_fieldArray_check_' + rowNum + '" class="dropdown-toggle">' +
+                    checkSelection +
+                    '<td><input id="filterPage_fieldArray_value_' + rowNum + '" value="' + fieldValue +
+                    '">&nbsp;<span id="filterPage_fieldArray_join_' + rowNum + '">' + fieldJoin + '</span></td>';
+
+            row += '<td class="col-xs-2">' + rowButtons + '</td>';
+
+            row += '</tr>';
+
+            table += row;
             rowNum += 1;
         });
+        return table;
     }
-}
 
-function connectTableChange() {
-    $(":input")
-            .change(function () {
-                var $element = $(this);
-                var id = this.id.replace(/_/g, '.');
-                var saveName = id.slice(0, id.lastIndexOf('.'));
-                var name = saveName.slice(saveName.lastIndexOf('.') + 1);
-                saveName = saveName.slice(0, saveName.lastIndexOf('.'));
-                var rowId = $element.closest('tr').index();
-                var targetObj = chkPath(uiState, saveName);
-                var rowValue = $element.val();
-                var sourceObj = $.grep(uiState.mapPage.fieldMapArray, function (e) {
-                    return e.name === rowValue
-                })[0];
-                if (name === 'field') {
-                    targetObj[rowId].field = rowValue;
-                    targetObj[rowId].value = sourceObj.value;
-                    $('#filterPage_fieldArray_value_' + rowId).val(sourceObj.value);
-                    fillObject(uiState, saveName[rowId], targetObj);
-                    toSave('dirty');
-                }
-                if (name === 'check' || name === 'value') {
-                    targetObj[rowId][name] = rowValue;
-                    fillObject(uiState, saveName[rowId], targetObj);
-                    toSave('dirty');
-                }
-            });
-    $(":button[name]")
-            .one("click", function () {
-                var $element = $(this);
-                var filterArray = chkPath(uiState, 'filterPage.fieldArray');
-                var action = this.name.toUpperCase();
-                var rowId = $element.closest('tr').index();
-                //alert(action + ' - ' + rowId);
-                if (action === "DEL") {
-                    // delete the row.
-                    filterArray.splice(rowId, 1);
-                    if (filterArray.length === rowId) {
-                        filterArray[rowId - 1].join = '';
-                    }
-                    $filterTable.html(renderTable(filterArray));
-                    setSelects();
-                    connectTableChange();
-                    toSave('dirty');
-                }
+    function setSelects() {
+        var rowNum = 0;
 
-                if (action === "AND" || action === "OR") {
-                    if (rowId + 1 < filterArray.length) {
-                        filterArray.splice(rowId + 1, 0, {
-                            field: 'please select..',
-                            check: 'equals',
-                            join: filterArray[rowId].join
-                        });
-                    }
-                    else {
-                        filterArray.splice(rowId + 1, 0, {field: 'please select..', check: 'equals', join: ''});
-                    }
-                    filterArray[rowId].join = action;
-                    $filterTable.html(renderTable(filterArray));
-                    setSelects();
-                    connectTableChange();
-                    toSave('dirty');
-                }
+        if (chkPath(uiState, 'filterPage.fieldArray') && chkPath(uiState, 'filterPage.fieldArray').length > 0) {
+            uiState.filterPage.fieldArray.forEach(function (field) {
+                $('#filterPage_fieldArray_field_' + rowNum).val(field.field);
+                $('#filterPage_fieldArray_check_' + rowNum).val(field.check);
+                rowNum += 1;
             });
-}</script>
+        }
+    }
+
+    function connectTableChange() {
+        $(":input")
+                .change(function () {
+                    var $element = $(this);
+                    var id = this.id.replace(/_/g, '.');
+                    var saveName = id.slice(0, id.lastIndexOf('.'));
+                    var name = saveName.slice(saveName.lastIndexOf('.') + 1);
+                    saveName = saveName.slice(0, saveName.lastIndexOf('.'));
+                    var rowId = $element.closest('tr').index();
+                    var targetObj = chkPath(uiState, saveName);
+                    var rowValue = $element.val();
+                    var sourceObj = $.grep(uiState.mapPage.fieldMapArray, function (e) {
+                        return e.name === rowValue
+                    })[0];
+                    if (name === 'field') {
+                        targetObj[rowId].field = rowValue;
+                        targetObj[rowId].value = sourceObj.value;
+                        $('#filterPage_fieldArray_value_' + rowId).val(sourceObj.value);
+                        fillObject(uiState, saveName[rowId], targetObj);
+                        toSave('dirty');
+                    }
+                    if (name === 'check' || name === 'value') {
+                        targetObj[rowId][name] = rowValue;
+                        fillObject(uiState, saveName[rowId], targetObj);
+                        toSave('dirty');
+                    }
+                });
+        $(":button[name]")
+                .one("click", function () {
+                    var $element = $(this);
+                    var filterArray = chkPath(uiState, 'filterPage.fieldArray');
+                    var action = this.name.toUpperCase();
+                    var rowId = $element.closest('tr').index();
+                    //alert(action + ' - ' + rowId);
+                    if (action === "DEL") {
+                        // delete the row.
+                        filterArray.splice(rowId, 1);
+                        if (filterArray.length === rowId) {
+                            filterArray[rowId - 1].join = '';
+                        }
+                        $filterTable.html(renderTable(filterArray));
+                        setSelects();
+                        connectTableChange();
+                        toSave('dirty');
+                    }
+
+                    if (action === "AND" || action === "OR") {
+                        if (rowId + 1 < filterArray.length) {
+                            filterArray.splice(rowId + 1, 0, {
+                                field: 'please select..',
+                                check: 'equals',
+                                join: filterArray[rowId].join
+                            });
+                        }
+                        else {
+                            filterArray.splice(rowId + 1, 0, {field: 'please select..', check: 'equals', join: ''});
+                        }
+                        filterArray[rowId].join = action;
+                        $filterTable.html(renderTable(filterArray));
+                        setSelects();
+                        connectTableChange();
+                        toSave('dirty');
+                    }
+                });
+    }</script>

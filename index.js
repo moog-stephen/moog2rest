@@ -26,10 +26,13 @@ var upload = multer({dest: 'uploads/'});
 
 const HTTP_PORT = 3000;
 
+const MOOG_PROTO = 'https';
+const UPLOAD_DIR = './uploads/';
+
 
 // Globals used in the application
 //
-var GTCPSock;
+var GStream;
 var GMoogREST;
 var GMoogEvent = new moog.MoogEvent();
 var GBuffLine;
@@ -71,6 +74,8 @@ app.post('/upload', upload.single('eventfile'), function (req, res, next) {
         } else {
             console.log('Renamed file');
         }
+        refreshFileList();
+        saveAppState();
     });
 
     return res.status(200).send({message: "Okay"});
@@ -105,28 +110,28 @@ io.on('connection', function (socket) {
     socket.on('appState', function (stateChange) {
         if (stateChange.key === 'stream.play') {
             console.log('Start playings events');
-            if (GTCPSock) {
-                GTCPSock.resume();
+            if (GStream) {
+                GStream.resume();
             }
         }
         if (stateChange.key === 'stream.stopped') {
             console.log('Stop playings events');
-            if (GTCPSock) {
-                GTCPSock.end();
+            if (GStream) {
+                GStream.end();
             }
         }
         if (stateChange.key === 'stream.paused' && stateChange.value === true) {
             console.log('Pause playings events');
             appState.stream.paused = stateChange.value;
-            if (GTCPSock) {
-                GTCPSock.pause();
+            if (GStream) {
+                GStream.pause();
             }
         }
         else if (stateChange.key === 'stream.paused' && stateChange.value === false) {
             console.log('UnPause playings events');
             appState.stream.paused = stateChange.value;
-            if (GTCPSock) {
-                GTCPSock.resume();
+            if (GStream) {
+                GStream.resume();
             }
         }
         if (stateChange.key === 'stream.observe') {
@@ -134,20 +139,111 @@ io.on('connection', function (socket) {
             appState.stream.observe = stateChange.value;
         }
     });
+
+    socket.on('playFile', function(fileName){
+        console.log('Start playing file '+fileName);
+        connectFile(fileName);
+    });
+
+    socket.on('delFile', function (fileName) {
+        deleteFile(fileName);
+    });
 });
 
 
-connectMoog();
+connectMoog(MOOG_PROTO);
 
 
+
+function connectTCP() {
 // TCP Socket listener section
 //
 // Create a server instance, and chain the listen function to it
 // The function passed to net.createServer() becomes the event handler for the 'connection' event
 // The sock object the callback function receives UNIQUE for each connection
-var TCPServer = net.createServer(function (TCPSock) {
+    var TCPServer = net.createServer(function (TCPSock) {
 
-    GTCPSock = TCPSock;
+        GStream = TCPSock;
+        var eventCounters = {};
+        eventCounters.inCount = 0;
+        eventCounters.outCount = 0;
+        eventCounters.discardCount = 0;
+
+        var interval = setInterval(function () {
+
+            console.log('Event Count ' + eventCounters.inCount);
+            if (eventCounters.inCount === 0) {
+                if (GStream && !appState.stream.paused) {
+                    GStream.resume();
+                }
+            }
+
+            io.emit('eventCount', JSON.stringify(eventCounters));
+
+            eventCounters.inCount = 0;
+            eventCounters.outCount = 0;
+            eventCounters.discardCount = 0;
+        }, 1000);
+
+
+        // We have a connection - a socket object is assigned to the connection automatically
+        console.log('Event Stream connection CONNECTED from: ' + TCPSock.remoteAddress + ':' + TCPSock.remotePort);
+
+        // Add a 'data' event handler to this instance of socket
+        //
+        TCPSock.on('data', function (data) {
+
+            console.log('Event Stream connection DATA from: ' + TCPSock.remoteAddress + ': ' + data);
+
+            // Do main processing
+            var chunkLines = data.toString().split('\n');
+            var completeLine = (data.slice(-1) === '\n');
+
+            for (var line = 0; line < chunkLines.length; line += 1) {
+                if (GBuffLine && line === 0) {
+                    chunkLines[line] = GBuffLine + chunkLines[line];
+                    GBuffLine = null;
+                    sendEvent(chunkLines[line], eventCounters, line, chunkLines.length - 1);
+                    continue;
+                }
+                if (line < chunkLines.length - 1) {
+                    sendEvent(chunkLines[line], eventCounters, line, chunkLines.length - 1);
+                    continue;
+                }
+                if (line === chunkLines.length - 1 && completeLine) {
+                    sendEvent(chunkLines[line], eventCounters, line, chunkLines.length - 1);
+                    continue;
+                }
+                console.log('Buffering incomplete line: ' + String(chunkLines[line]));
+                GBuffLine = chunkLines[line];
+                if (GStream) {
+                    GStream.pause();
+                }
+            }
+
+            // we will broadcast the data to all users (should only be one)
+            //
+
+        });
+
+        // Add a 'close' event handler to this instance of socket
+        TCPSock.on('close', function (data) {
+            console.log('Event Stream connection was CLOSED by: ' + TCPSock.remoteAddress + ' ' + TCPSock.remotePort);
+            clearInterval(interval);
+        });
+    }).listen(TCPPort, TCPHost);
+
+    TCPServer.on('listening', function (data) {
+        console.log('Event stream Server listening on ' + util.inspect(TCPServer.address()));
+    });
+}
+//
+// TCP Socket listener done
+
+// file stream listener
+function connectFile(fileName) {
+    var fileStream = fs.createReadStream(UPLOAD_DIR+fileName, {flags: 'r', encoding: 'utf-8'});
+
     var eventCounters = {};
     eventCounters.inCount = 0;
     eventCounters.outCount = 0;
@@ -157,8 +253,8 @@ var TCPServer = net.createServer(function (TCPSock) {
 
         console.log('Event Count ' + eventCounters.inCount);
         if (eventCounters.inCount === 0) {
-            if (GTCPSock && !appState.stream.paused) {
-                GTCPSock.resume();
+            if (GStream && !appState.stream.paused) {
+                GStream.resume();
             }
         }
 
@@ -169,16 +265,16 @@ var TCPServer = net.createServer(function (TCPSock) {
         eventCounters.discardCount = 0;
     }, 1000);
 
+    fileStream.on('open', function(fd) {
+        console.log('File open for reading');
+        GStream = fileStream;
 
-    // We have a connection - a socket object is assigned to the connection automatically
-    console.log('Event Stream connection CONNECTED from: ' + TCPSock.remoteAddress + ':' + TCPSock.remotePort);
+        console.log('Event Stream connection to: ' + fileStream.path + ' - fd: ' + fd);
+    });
 
-    // Add a 'data' event handler to this instance of socket
-    //
-    TCPSock.on('data', function (data) {
+    fileStream.on('data', function(data) {
 
-        console.log('Event Stream connection DATA from: ' + TCPSock.remoteAddress + ': ' + data);
-
+        console.log('Event Stream data from: ' + fileStream.path + ' - Data: ' + data);
         // Do main processing
         var chunkLines = data.toString().split('\n');
         var completeLine = (data.slice(-1) === '\n');
@@ -200,29 +296,22 @@ var TCPServer = net.createServer(function (TCPSock) {
             }
             console.log('Buffering incomplete line: ' + String(chunkLines[line]));
             GBuffLine = chunkLines[line];
-            if (GTCPSock) {
-                GTCPSock.pause();
+            if (GStream) {
+                GStream.pause();
             }
         }
-
-        // we will broadcast the data to all users (should only be one)
-        //
-
     });
 
-    // Add a 'close' event handler to this instance of socket
-    TCPSock.on('close', function (data) {
-        console.log('Event Stream connection was CLOSED by: ' + TCPSock.remoteAddress + ' ' + TCPSock.remotePort);
+    fileStream.on('error', function(err) {
+        console.error('File stream error '+util.inspect(err));
+    });
+
+    fileStream.on('end', function () {
+        console.log('All file content read.');
         clearInterval(interval);
     });
-}).listen(TCPPort, TCPHost);
+}
 
-TCPServer.on('listening', function (data) {
-    console.log('Event stream Server listening on ' + util.inspect(TCPServer.address()));
-});
-
-//
-// TCP Socket listener done
 
 /**
  *
@@ -250,27 +339,31 @@ function sendEvent(eventLine, counters, line, totLines) {
             // console.log('GMoogEvent: '+util.inspect(GMoogEvent));
             // Send event to MOOG REST
             GMoogREST.sendEvent(GMoogEvent, function (res, rtn) {
-                if (res.statusCode == 200) {
+                if (res.statusCode === 200) {
                     console.log('moogREST message sent, return code: ' + res.statusCode);
                     //console.log('moogREST result: ' + util.inspect(rtn));
                     io.emit('message', {status: 'S', text: res.statusCode + ' - ' + res.statusMessage});
                     counters.outCount++;
                     console.log('Lines processed :' + line + ' of ' + totLines);
                     if (line >= totLines) {
-                        if (GTCPSock && !appState.stream.paused) {
-                            GTCPSock.resume();
+                        if (GStream && !appState.stream.paused) {
+                            GStream.resume();
                         }
                     }
                     return true;
                 }
                 else {
-                    console.error('moogREST - ' + res.statusCode + ' - ' + res.statusMessage);
-                    //console.error('moogREST - ' + util.inspect(rtn));
-                    io.emit('message', {status: 'D', text: res.statusCode + ' - ' + res.statusMessage});
+                    if (res && res.statusCode) {
+                        console.error('moogREST - ' + res.statusCode + ' - ' + res.statusMessage);
+                        io.emit('message', {status: 'D', text: 'MOOG REST Connection '+res.statusCode + ' - ' + res.statusMessage});
+                    } else {
+                        console.error('moogREST - ' + util.inspect(rtn));
+                        io.emit('message', {status: 'D', text: 'MOOG REST Connection '+rtn.code});
+                    }
                     console.log('Lines processed :' + line + ' of ' + totLines);
                     if (line >= totLines) {
-                        if (GTCPSock && !appState.stream.paused) {
-                            GTCPSock.resume();
+                        if (GStream && !appState.stream.paused) {
+                            GStream.resume();
                         }
                     }
                     return false;
@@ -282,8 +375,8 @@ function sendEvent(eventLine, counters, line, totLines) {
             counters.discardCount++;
             console.log('Lines processed :' + line + ' of ' + totLines);
             if (line >= totLines) {
-                if (GTCPSock && !appState.stream.paused) {
-                    GTCPSock.resume();
+                if (GStream && !appState.stream.paused) {
+                    GStream.resume();
                 }
             }
             return false;
@@ -293,8 +386,8 @@ function sendEvent(eventLine, counters, line, totLines) {
         console.error('mapEvent failed.');
         console.log('Lines processed :' + line + ' of ' + totLines);
         if (line >= totLines) {
-            if (GTCPSock && !appState.stream.paused) {
-                GTCPSock.resume();
+            if (GStream && !appState.stream.paused) {
+                GStream.resume();
             }
         }
         return false;
@@ -338,6 +431,44 @@ function mapEvent(eventLine) {
     return false;
 }
 
+
+/**
+ * Read the uploads directory and list the files found
+ */
+function refreshFileList() {
+    fs.readdir(UPLOAD_DIR, function (err, files) {
+        if (err) {
+            console.err('Uploads file listing error '+util.inspect(err));
+            return;
+        }
+        if (files.length >= 1) {
+            appState.listenPage.files = files;
+        } else {
+            appState.listenPage.files = [];
+        }
+    });
+}
+
+/**
+ * Delete the named file from the uploads directory
+ * @param fileName
+ */
+function deleteFile(fileName) {
+    if (!fileName) return;
+
+    var filePath = UPLOAD_DIR+fileName;
+
+    fs.unlink(filePath, function(err) {
+        if (err) {
+            console.error('Failed to delete '+filePath);
+        } else {
+            console.log('File '+fileName+' deleted.');
+        }
+    });
+
+    refreshFileList();
+    saveAppState();
+}
 
 /**
  *
@@ -444,15 +575,17 @@ function createSample(sampleLine) {
 /**
  * MOOG REST connection section
  */
-function connectMoog() {
+function connectMoog(proto) {
 
     console.log('Connecting to MOOG');
-    var proto = 'https';
+    proto = proto ? proto : 'http';
 
-    var options = {
-        // TODO Accommodate https and the cert files in the UI
-        'url': proto + '://' + appState.sendPage.host + ':' + appState.sendPage.port
-    };
+    var testEvent = new moog.MoogEvent();
+
+    // init with some defaults
+    //
+    var options = {};
+    options.url = proto + '://' + appState.sendPage.host + ':' + appState.sendPage.port;
 
     if (appState.sendPage.user) {
         options.authUser = appState.sendPage.user;
@@ -468,7 +601,24 @@ function connectMoog() {
     //
     GMoogREST = moog.moogREST(options);
 
-    console.log('MOOG Connected ' + util.inspect(GMoogREST.url.href));
+
+    GMoogREST.sendEvent(testEvent,function (res, rtn) {
+        if (res.statusCode === 200) {
+            console.log('MOOG Connected ' + util.inspect(GMoogREST.url));
+            console.log('moogREST test message sent, return code: ' + res.statusCode);
+            return true;
+        }
+        else {
+            if (res && res.statusCode) {
+                console.error('moogREST connection failed - ' + res.statusCode + ' - ' + res.statusMessage);
+                io.emit('message', {status: 'D', text: 'MOOG REST Connection '+res.statusCode + ' - ' + res.statusMessage});
+            } else {
+                console.error('moogREST connection failed - ' + util.inspect(rtn));
+                io.emit('message', {status: 'D', text: 'MOOG REST Connection '+rtn.code});
+            }
+            return false;
+        }
+    });
 }
 
 /**
@@ -501,6 +651,8 @@ function initAppState(fileName) {
         console.log('File : ' + fileName + ' not readable');
     }
 
+
+
     // General init parameters
     appState.stream = {};
     appState.stream.play = true;
@@ -521,13 +673,18 @@ function initAppState(fileName) {
     if (!appState.listenPage) {
         // Listen page parameters
         appState.listenPage = {};
-        appState.listenPage.host = 'localhost';
-        appState.listenPage.port = 8641;
         appState.listenPage.state = 'PAUSED';
+        appState.listenPage.cache = 10;
+        appState.listenPage.streamType = "socket";
+        appState.listenPage.socket = {};
+        appState.listenPage.socket.host = 'localhost';
+        appState.listenPage.socket.port = 8641;
+        appState.listenPage.files = [];
     }
     // Always refresh the iFaces
     appState.listenPage.iFaces = iFaces;
 
+    refreshFileList();
 
     if (!appState.parsePage) {
         // Parse page parameters
@@ -597,7 +754,6 @@ function initAppState(fileName) {
     return appState;
 }
 
-
 /**
  * Save the configuration to a local file
  * @param socket
@@ -605,6 +761,8 @@ function initAppState(fileName) {
  */
 function saveAppState(socket, fileName) {
 
+    // If socket is not passed don't echo to client
+    socket = socket ? socket : false;
     // If fileName is passed read from that config file
     //
     fileName = fileName ? fileName : './config/rest_moog_reader.conf';
@@ -616,17 +774,20 @@ function saveAppState(socket, fileName) {
     fs.writeFile(fileName, appStateFileContent, function (err) {
         if (err) {
             console.log('Config file write error ' + fileName);
-            socket.emit('message', {status: 'D', text: 'File Save ERROR.'});
+            if (socket) {
+                socket.emit('message', {status: 'D', text: 'File Save ERROR.'});
+            }
         }
         else {
             console.log('Config file saved ' + fileName);
-            socket.emit('message', {status: 'S', text: 'Config saved okay.'});
+            if (socket) {
+                socket.emit('message', {status: 'S', text: 'Config saved okay.'});
+            }
         }
     });
 
     // Broadcast new state
     io.emit('stateData', {confLoad: true, data: JSON.stringify(appState)});
-
 }
 
 

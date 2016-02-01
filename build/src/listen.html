@@ -3,7 +3,7 @@
 
     <!-- Nav tabs -->
     <ul class="nav nav-tabs" role="tablist">
-        <li class="active">
+        <li>
             <a href="#socket" role="tab" data-toggle="tab">Socket</a>
         </li>
         <li>
@@ -28,11 +28,20 @@
                 </div>
             </div>
         </div>
-        <div class="tab-pane fade" id="file">
+        <div class="tab-pane fade container-fluid" id="file">
             <h4>File Configuration</h4>
 
             <!-- Drop Zone -->
-            <div class="upload-drop-zone dropzone" id="drop-zone"></div>
+            <div class="dropzone col-sm-3 upload-drop-zone" id="drop-zone"></div>
+            <div>
+                <div class="dataTable_wrapper col-sm-6">
+                    <table class="table" id="fileTable">
+                        <tbody id="fileTable-body">
+                        <!-- buildTable() output here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -76,12 +85,23 @@
         console.log(files)
     };
 
+    var i;
+
+    window.addEventListener("dragover",function(e){
+        e = e || event;
+        e.preventDefault();
+    },false);
+    window.addEventListener("drop",function(e){
+        e = e || event;
+        e.preventDefault();
+    },false);
+
     $hostList.html('<label class="radio-inline">' +
             '<input type="radio" name="ni" value="localhost">localhost</label>' +
             '<label class="radio-inline">' +
             '<input type="radio" name="ni" value="0.0.0.0">Any (0.0.0.0)</label>'
     );
-    for (var i = 0; i < iFaces.length; i += 1) {
+    for (i = 0; i < iFaces.length; i += 1) {
         var rdb = '<label class="radio-inline">' +
                 '<input type="radio" name="ni" value="' + iFaces[i] + '">' + iFaces[i] +
                 '</label>';
@@ -122,9 +142,35 @@
         url: "/upload",
         paramName: "eventfile", // The name that will be used to transfer the file
         maxFilesize: 10, // MB
-        dictDefaultMessage: "Click to browse or drag a text file here to upload. Max file size10Mb",
+        dictDefaultMessage: "Click to browse or drag a text file here to upload. Max file size 10Mb",
+        clickable: true,
+        createImageThumbnails: false,
+        maxFiles: 1,
         addRemoveLinks: true,
-        acceptedFiles: "text/*"
+        acceptedFiles: ".csv,.txt,.log,text/*",
+        init: function() {
+            this.on("success", function(serverResp) {
+                debugger;
+                if (fileList.indexOf(serverResp.name) < 0) {
+                    fileList.push(serverResp.name);
+                }
+
+                $fileTable.html(buildTable(fileList));
+                connectTableChange();
+
+                //clear the dropzone
+                myDropZone.removeFile(serverResp);
+
+                if (fileList.length >= 4) {
+                    debugger;
+                    myDropZone.element.innerText = 'The maximum of 4 files on the server has been reached.';
+                    myDropZone.disable();
+                } else {
+                    myDropZone.element.innerText = "Click to browse or drag a text file here to upload. Max file size 10Mb";
+                    myDropZone.enable();
+                }
+            });
+        }
     };
     var myDropZone = new Dropzone($dropZone, dropZoneOptions);
 
@@ -133,8 +179,91 @@
 
     // catch the tab change event
     $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-        var target = $(e.target).attr("href"); // activated tab
-        fillObject(uiState, 'listenPage.streamType', target.replace('#','') );
-        toSave('dirty');
+        var target = ($(e.target).attr("href")).replace('#',''); // activated tab
+        if (target !== chkPath(uiState, 'listenPage.streamType')) {
+            fillObject(uiState, 'listenPage.streamType', target );
+            toSave('dirty');
+        }
     });
+
+    var selectTab = chkPath(uiState, 'listenPage.streamType');
+    var fileList = chkPath(uiState, 'listenPage.files');
+    var odd = true;
+    if (selectTab === 'file') {
+        var $fileTable = $('#fileTable-body');
+        // make file tab active
+        $('.nav-tabs a[href="#' + selectTab + '"]').tab('show');
+        $fileTable.html(buildTable(fileList));
+        connectTableChange();
+    }
+
+    function buildTable(fileList){
+        var delButton = '<button type="button" class="btn btn-default btn-xs" name="DEL">' +
+                '<span class="glyphicon glyphicon-remove" aria-hidden="true">' +
+                '</span></button>';
+        var playButton = '<button type="button" class="btn btn-default btn-xs" name="Play">' +
+                '<span class="glyphicon glyphicon-play" aria-hidden="true">' +
+                '</span></button>';
+        var row = '';
+        var table = '';
+        for (i = 0; i < 4; i = i+1){
+
+            if (odd) {
+                odd = false;
+                row += '<tr class="even">';
+            }
+            else {
+                odd = true;
+                row += '<tr class="odd">';
+            }
+            if (fileList[i]) {
+                row += '<td class="file-name">'+fileList[i]+'</td>';
+                row += '<td class="col-xs-3">' + playButton + delButton + '</td>';
+            } else {
+                row = '';
+            }
+
+            row += '</tr>';
+
+            table += row;
+            row = ''
+        }
+        return table;
+    }
+
+    function connectTableChange() {
+/*        $(".file-name")
+                .css('cursor', 'pointer')
+                .one("click", function () {
+                    var $element = $(this);
+                    var playFileName = $element.text();
+                    // Set this file as default for play
+                    socket.emit('playFile', playFileName);
+                });
+*/
+        $(":button[name]")
+                .on("click", function () {
+                    var $element = $(this);
+                    var action = this.name.toUpperCase();
+                    var rowId = $element.closest('tr').index();
+                    //alert(action + ' - ' + rowId);
+                    if (action === "DEL") {
+                        // delete the file on the server
+                        socket.emit('delFile', fileList[rowId]);
+                        fileList.splice(rowId, 1);
+
+                        // Maybe do this when server confirms delete
+                        $fileTable.html(buildTable(fileList));
+                        connectTableChange();
+                    }
+                    if (action === 'PLAY') {
+                        socket.emit('playFile', fileList[rowId]);
+                        var $row = $element.parent().parent();
+                        $row.siblings().removeClass("highlight-file");
+                        $('.glyphicon-play',$row.siblings()).removeClass('text-success');
+                        $row.addClass("highlight-file");
+                        $('.glyphicon-play',$row).addClass('text-success');
+                    }
+                });
+    }
 </script>
