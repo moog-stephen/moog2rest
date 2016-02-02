@@ -1,34 +1,67 @@
 <div id="padding-height">
     <H3>Send to MOOG Page</H3>
+    <div class="container-fluid half-padding">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h5 class="panel-title">Connection detail</h5>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-horizontal">
+                            <div class="form-group">
+                                <label for="sendPage_host" class="col-sm-4 control-label">Host Name/IP</label>
+                                <div class="col-sm-8">
+                                    <input type="text" class="form-control" id="sendPage_host"/>
+                                </div>
+                            </div>
 
-    <div class="form-group form-inline">
-        <div class="form-group">
-            <label for="sendPage_host" class="form-inline label-inline">Host Name or IP</label>
-            <input type="text" class="form-control" id="sendPage_host"/>
-        </div>
+                            <div class="form-group">
+                                <label for="sendPage_port" class="col-sm-4 control-label">Port number</label>
+                                <div class="col-sm-8">
+                                    <input type="number" class="form-control" id="sendPage_port" min="3000"
+                                           max="90000"/>
+                                </div>
+                            </div>
 
-        <div class="form-group">
-            <label for="sendPage_port" class="form-inline label-inline2">Port number</label>
-            <input type="number" class="form-control" id="sendPage_port" min="3000" max="90000"/>
+                            <div class="form-group">
+                                <label for="sendPage_user" class="col-sm-4 control-label">User Name</label>
+                                <div class="col-sm-8">
+                                    <input type="text" class="form-control" id="sendPage_user" placeholder="graze"/>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="sendPage_pass" class="col-sm-4 control-label">Password</label>
+                                <div class="col-sm-8">
+                                    <input type="password" class="form-control" id="sendPage_pass"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sendPage_secret" class="col-sm-4 control-label">Secret</label>
+                                <div class="col-sm-8">
+                                    <input type="text" class="form-control" id="sendPage_secret"/>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <h5 class="panel-title">Connection status</h5>
+                    </div>
+                    <div class="panel-body">
+                        Text from connection status here
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="form-group form-inline">
-        <div class="form-group">
-            <label for="sendPage_user" class="form-inline label-inline">User Name</label>
-            <input type="text" class="form-control" id="sendPage_user" placeholder="graze"/>
-        </div>
 
-        <div class="form-group">
-            <label for="sendPage_pass" class="form-inline label-inline2">Password</label>
-            <input type="password" class="form-control" id="sendPage_pass" min="3000" max="90000"/>
-        </div>
-    </div>
-    <div class="form-group form-inline">
-        <div class="form-group">
-            <label for="sendPage_secret" class="form-inline label-inline">Secret</label>
-            <input type="text" class="form-control" id="sendPage_secret"/>
-        </div>
-    </div>
 </div>
 
 <script>
