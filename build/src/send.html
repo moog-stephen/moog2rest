@@ -55,7 +55,9 @@
                         <h5 class="panel-title">Connection status</h5>
                     </div>
                     <div class="panel-body">
-                        Text from connection status here
+                        <div id="moog_connection_status">
+                            Text from connection status here
+                        </div>
                     </div>
                 </div>
             </div>
@@ -73,6 +75,7 @@
     var $sendSecret = $('#sendPage_secret');
     var $sendUser = $('#sendPage_user');
     var $sendPass = $('#sendPage_pass');
+    var $moogStatusMsg = $('#moog_connection_status');
 
     var host = 'moog';
     var port = 8888;
@@ -83,6 +86,10 @@
         if (parseSection.hasOwnProperty(param)) {
             setField('sendPage.' + param);
         }
+    }
+
+    if(session.moogStatusMsg) {
+        $moogStatusMsg.html(session.moogStatusMsg);
     }
 
     connectChange();

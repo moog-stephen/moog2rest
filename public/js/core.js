@@ -8,6 +8,7 @@ var $pageContent = $("#pageContent");
 var $statusIcon = $("#status-icon");
 
 var uiState = {};
+var session = {};
 var eventDataArraySize = 10;
 var eventDataArray = [];
 
@@ -236,7 +237,7 @@ socket.on('stateData', function (config) {
     // TODO Load the data into the input fields
     switch (chkPath(uiState, 'page')) {
         case 'listen':
-            $('#listen_data_field').html(displayEvents);
+            $('#listenPage_listen_data_field').html(displayEvents);
             break;
         default:
     }
@@ -254,6 +255,14 @@ socket.on('message', function (message) {
         $statusIcon.addClass('icon-success');
     }
     $messages.html(message.text);
+});
+
+socket.on('moogStatus', function (message) {
+    session.moogStatusMsg = message.text;
+    var messageHtml = '<div role="alert" class="alert alert-';
+    messageHtml += message.severity ? message.severity : 'info';
+    messageHtml += '">'+session.moogStatusMsg+'</div>';
+    session.moogStatusMsg = messageHtml;
 });
 
 /**

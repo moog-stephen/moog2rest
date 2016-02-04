@@ -26,7 +26,7 @@ var upload = multer({dest: 'uploads/'});
 
 const HTTP_PORT = 3000;
 
-const MOOG_PROTO = 'https';
+const MOOG_PROTO = 'http';
 const UPLOAD_DIR = './uploads/';
 
 
@@ -35,13 +35,14 @@ const UPLOAD_DIR = './uploads/';
 var GStream;
 var GMoogREST;
 var GMoogEvent = new moog.MoogEvent();
+var GMoogState = {};
 var GBuffLine;
 
 var appState = initAppState();
 var TCPHost = appState.listenPage.host;
 var TCPPort = appState.listenPage.port;
 
-var firstRun = true;
+var refreshData = true;
 
 app.use(favicon(__dirname + '/public/images/moofavicon.png'));
 
@@ -100,10 +101,14 @@ io.on('connection', function (socket) {
     socket.on('page', function (page) {
         console.log('Page request for ' + page);
         pages.sendPage(page, socket);
-        if (firstRun) {
+        if (refreshData) {
             console.log('Load State Data ');
             socket.emit('stateData', {confLoad: true, data: JSON.stringify(appState)});
-            firstRun = false;
+            refreshData = false;
+        }
+        if (page === '#send' && GMoogState) {
+            console.log('Sending moogState '+util.inspect(GMoogState));
+            socket.emit('moogStatus', GMoogState);
         }
     });
 
@@ -343,6 +348,9 @@ function sendEvent(eventLine, counters, line, totLines) {
                     console.log('moogREST message sent, return code: ' + res.statusCode);
                     //console.log('moogREST result: ' + util.inspect(rtn));
                     io.emit('message', {status: 'S', text: res.statusCode + ' - ' + res.statusMessage});
+                    GMoogState.text = 'moogREST message sent, '+ util.inspect(GMoogREST.url)+'\n'+ line + ' of ' + totLines;
+                    GMoogState.severity = 'success';
+                    io.emit('moogStatus', GMoogState);
                     counters.outCount++;
                     console.log('Lines processed :' + line + ' of ' + totLines);
                     if (line >= totLines) {
@@ -356,22 +364,26 @@ function sendEvent(eventLine, counters, line, totLines) {
                     if (res && res.statusCode) {
                         console.error('moogREST - ' + res.statusCode + ' - ' + res.statusMessage);
                         io.emit('message', {status: 'D', text: 'MOOG REST Connection '+res.statusCode + ' - ' + res.statusMessage});
+                        GMoogState.text = 'MOOG REST Connection '+ util.inspect(GMoogREST.url)+'\n'+res.statusCode + ' - ' + res.statusMessage;
+                        GMoogState.severity = 'danger';
+                        io.emit('moogStatus', GMoogState);
                     } else {
                         console.error('moogREST - ' + util.inspect(rtn));
                         io.emit('message', {status: 'D', text: 'MOOG REST Connection '+rtn.code});
+                        GMoogState.text = 'MOOG REST Connection '+ util.inspect(GMoogREST.url)+'\n'+rtn.code;
+                        GMoogState.severity = 'danger';
+                        io.emit('moogStatus', GMoogState);
                     }
-                    console.log('Lines processed :' + line + ' of ' + totLines);
-                    if (line >= totLines) {
-                        if (GStream && !appState.stream.paused) {
-                            GStream.resume();
-                        }
-                    }
+                    GStream.pause();
+                    appState.stream.paused = true;
+                    console.log('Processing error, paused at line :' + line);
+
                     return false;
                 }
             });
         }
         else {
-            console.error('filterEvent filtered out.');
+            console.error('FilterEvent filtered out.');
             counters.discardCount++;
             console.log('Lines processed :' + line + ' of ' + totLines);
             if (line >= totLines) {
@@ -577,7 +589,6 @@ function createSample(sampleLine) {
  */
 function connectMoog(proto) {
 
-    console.log('Connecting to MOOG');
     proto = proto ? proto : 'http';
 
     var testEvent = new moog.MoogEvent();
@@ -586,6 +597,7 @@ function connectMoog(proto) {
     //
     var options = {};
     options.url = proto + '://' + appState.sendPage.host + ':' + appState.sendPage.port;
+    console.log('Connecting to MOOG: '+options.url);
 
     if (appState.sendPage.user) {
         options.authUser = appState.sendPage.user;
@@ -604,17 +616,26 @@ function connectMoog(proto) {
 
     GMoogREST.sendEvent(testEvent,function (res, rtn) {
         if (res.statusCode === 200) {
-            console.log('MOOG Connected ' + util.inspect(GMoogREST.url));
+            console.log('MOOG Connected ' + util.inspect(GMoogREST.url.href));
             console.log('moogREST test message sent, return code: ' + res.statusCode);
+            GMoogState.text = 'moogREST test message sent, '+ util.inspect(GMoogREST.url.href)+'\nreturn code: ' + res.statusCode;
+            GMoogState.severity = 'success';
+            io.emit('moogStatus', GMoogState);
             return true;
         }
         else {
             if (res && res.statusCode) {
                 console.error('moogREST connection failed - ' + res.statusCode + ' - ' + res.statusMessage);
                 io.emit('message', {status: 'D', text: 'MOOG REST Connection '+res.statusCode + ' - ' + res.statusMessage});
+                GMoogState.text = 'MOOG REST Connection '+ util.inspect(GMoogREST.url.href)+'\n'+res.statusCode + ' - ' + res.statusMessage;
+                GMoogState.severity = 'danger';
+                io.emit('moogStatus', GMoogState);
             } else {
                 console.error('moogREST connection failed - ' + util.inspect(rtn));
                 io.emit('message', {status: 'D', text: 'MOOG REST Connection '+rtn.code});
+                GMoogState.text = 'MOOG REST Connection '+ util.inspect(GMoogREST.url.href)+'\n'+rtn.code;
+                GMoogState.severity = 'danger';
+                io.emit('moogStatus', GMoogState);
             }
             return false;
         }
