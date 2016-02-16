@@ -16,8 +16,8 @@
                         <thead>
                         <tr>
                             <th>Target Field</th>
-                            <th>Source Field</th>
-                            <th>Sample</th>
+                            <th>Source - Sample</th>
+                            <!--<th>Sample</th>-->
                             <th>Type</th>
                             <th>Conversion</th>
                         </tr>
@@ -58,7 +58,7 @@
 
         if (uiState.parsePage.fieldArray.length > 0) {
             uiState.parsePage.fieldArray.forEach(function (field) {
-                fieldSelection += '<option>' + field.name + '</option>';
+                fieldSelection += '<option>' + field.name + ' - ' + field.value + '</option>';
             });
             fieldSelection += '</select></td>';
         }
@@ -76,7 +76,7 @@
                 row += '<td>' + field.name + '</td>' +
                         '<td><select id="mapPage_fieldMapArray_source_' + rowNum + '" class="dropdown-toggle">' +
                         fieldSelection +
-                        '<td id="mapPage_fieldMapArray_sample_' + rowNum + '">' + field.value + '</td>' +
+                        //'<td id="mapPage_fieldMapArray_sample_' + rowNum + '">' + field.value + '</td>' +
                         '<td id="mapPage_fieldMapArray_type_' + rowNum + '">' + field.type + '</td>';
 
                 if (field.type === 'number') {
@@ -130,8 +130,8 @@
                     })[0];
                     if (name === 'source') {
                         targetObj[rowId].source = value;
-                        targetObj[rowId].value = sourceObj.value;
-                        $('#mapPage_fieldMapArray_sample_' + rowId).text(sourceObj.value);
+                        //targetObj[rowId].value = sourceObj.value;
+                        //$('#mapPage_fieldMapArray_sample_' + rowId).text(sourceObj.value);
                         fillObject(uiState, saveName[rowId], targetObj);
                         toSave('dirty');
                     }
